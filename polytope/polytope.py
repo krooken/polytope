@@ -2077,7 +2077,7 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                     break
             if R < abs_tol:
                 level = level - 1
-                res = union(res, Polytope(A[INDICES, :], B[INDICES]), False)
+                res = union(res, reduce(Polytope(A[INDICES, :], B[INDICES])), False)
                 nzcount = np.nonzero(counter)[0]
                 for jj in xrange(len(nzcount) - 1, -1, -1):
                     if counter[level] <= mi[level]:
