@@ -1971,6 +1971,10 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                 save=False):
     """Subtract a region from a polytope
 
+    For a discription of the algorithm, see algorithm 2 in:
+    Mato Baotic "Polytopic computations in constrained optimal control"
+    Automatika, 2009
+
     @param poly: polytope from which to subtract a region
     @param reg: region which should be subtracted
     @param abs_tol: absolute tolerance
@@ -2039,8 +2043,8 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
         return Polytope()
     # some constraints are active
     M = np.sum(mi)
-    if len(mi[0:len(mi) - 1]) > 0:
-        csum = np.cumsum(np.hstack([0, mi[0:len(mi) - 1]]))
+    if len(mi) - 1 > 0:
+        csum = np.cumsum(np.hstack([0, mi[0:-1]]))
         beg_mi = csum + m * np.ones(len(csum), dtype=int)
     else:
         beg_mi = np.array([m])
@@ -2059,21 +2063,28 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                 ax.figure.savefig('./img/res' + str(res_count) + '.pdf')
                 res_count += 1
         if counter[level] == 0:
+            # This is the first visit to this level
             if save:
                 logger.debug('counter[level] is 0')
 
+            # Go through all remaining polytopes that we want to remove and check whether any of them removes
+            # anything from the current set of hyperplanes (constraints)
             for j in xrange(level, N):
+                # Construct a set of constraints with the current hyperplanes and the hyperplanes of polytope j
+                # This is the intersection of the current hyperplanes and polytope j
                 auxINDICES = np.hstack([
                     INDICES,
                     range(beg_mi[j], beg_mi[j] + mi[j])
                 ])
                 Adummy = A[auxINDICES, :]
                 bdummy = B[auxINDICES]
+                # Will polytope j remove anything from the current set of hyperplanes?
                 R, _ = cheby_ball(Polytope(Adummy, bdummy))
                 if R > abs_tol:
+                    # Yes, constrain the set of constraints with the negation of one of polytope j's hyperplanes
                     level = j
                     counter[level] = 1
-                    INDICES = np.hstack([INDICES, beg_mi[level] + M])
+                    INDICES = np.hstack([INDICES, beg_mi[level] + M])  # Offset M negates hyperplanes
                     break
             if R < abs_tol:
                 # Since no polytope will remove anything, the current set of hyperplanes must be in the result
@@ -2088,25 +2099,36 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                     range(beg_mi[level], beg_mi[level] + mi[level])
                 ])
         else:
+            # We have been at this level before
             if save:
                 logger.debug('counter[level] > 0')
             # counter(level) > 0
             nzcount = np.nonzero(counter)[0]
+            # Start from the deepest level and pop out of it if we are done at that level
             for jj in xrange(len(nzcount) - 1, -1, -1):
                 level = nzcount[jj]
                 counter[level] += 1
+                # Have we checked all hyperplanes?
                 if counter[level] <= mi[level]:
+                    # No
+                    # We have already handled the negative side of the last hyperplane, so negate it to get the
+                    # positive side
                     INDICES[-1] -= M
+                    # Add the next negative hyperplane of the polytope of the current level
                     INDICES = np.hstack([
                         INDICES,
                         beg_mi[level] + counter[level] + M - 1
                     ])
+                    # Stay at this level, since we haven't checked all hyperplanes yet
                     break
                 else:
+                    # We have checked all hyperplanes at this level
+                    # Pop out of this level by resetting our states
                     counter[level] = 0
                     INDICES = INDICES[0:m + np.sum(counter)]
                     level -= 1
                     if level == -1:
+                        # We're done at all levels, return
                         if save:
                             if res:
                                 ax = res.plot()
@@ -2118,10 +2140,15 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                         return res
         test_poly = Polytope(A[INDICES, :], B[INDICES])
         rc, _ = cheby_ball(test_poly)
+        # Do we have a non-empty diff at this level?
         if rc > abs_tol:
             if level == N - 1:
+                # The diff is non-empty, and we have no more polytopes to remove.
+                # Add the current set of constraints to the result.
                 res = union(res, reduce(test_poly), False)
             else:
+                # The diff is non-empty, but we need to check whether the remaining polytopes remove anything.
+                # Go one level deeper to continue the search.
                 level += 1
     logger.debug('returning res from end')
     return res
