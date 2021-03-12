@@ -2089,7 +2089,7 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                         break
                     else:
                         counter[level] = 0
-                        INDICES = INDICES[0:m + sum(counter)]
+                        INDICES = INDICES[0:m + np.sum(counter)]
                         if level == -1:
                             logger.debug('returning res from 1st point')
                             return res
