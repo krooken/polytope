@@ -2076,23 +2076,17 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                     INDICES = np.hstack([INDICES, beg_mi[level] + M])
                     break
             if R < abs_tol:
-                level -= 1
+                # Since no polytope will remove anything, the current set of hyperplanes must be in the result
                 res = union(res, reduce(Polytope(A[INDICES, :], B[INDICES])), False)
-                nzcount = np.nonzero(counter)[0]
-                for jj in xrange(len(nzcount) - 1, -1, -1):
-                    if counter[level] <= mi[level]:
-                        INDICES[-1] -= M
-                        INDICES = np.hstack([
-                            INDICES,
-                            beg_mi[level] + counter[level] + M
-                        ])
-                        break
-                    else:
-                        counter[level] = 0
-                        INDICES = INDICES[0:m + np.sum(counter)]
-                        if level == -1:
-                            logger.debug('returning res from 1st point')
-                            return res
+                # None of the remaining polytopes removes anything
+                # Indicate that we are done at this level
+                counter[level] = mi[level]
+                # Add the polytope to the indices to get an empty intersection
+                # This will force the algorithm to pop out of this level and move on
+                INDICES = np.hstack([
+                    INDICES,
+                    range(beg_mi[level], beg_mi[level] + mi[level])
+                ])
         else:
             if save:
                 logger.debug('counter[level] > 0')
