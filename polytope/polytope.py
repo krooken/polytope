@@ -2076,12 +2076,12 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                     INDICES = np.hstack([INDICES, beg_mi[level] + M])
                     break
             if R < abs_tol:
-                level = level - 1
+                level -= 1
                 res = union(res, reduce(Polytope(A[INDICES, :], B[INDICES])), False)
                 nzcount = np.nonzero(counter)[0]
                 for jj in xrange(len(nzcount) - 1, -1, -1):
                     if counter[level] <= mi[level]:
-                        INDICES[-1] = INDICES[-1] - M
+                        INDICES[-1] -= M
                         INDICES = np.hstack([
                             INDICES,
                             beg_mi[level] + counter[level] + M
@@ -2100,9 +2100,9 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
             nzcount = np.nonzero(counter)[0]
             for jj in xrange(len(nzcount) - 1, -1, -1):
                 level = nzcount[jj]
-                counter[level] = counter[level] + 1
+                counter[level] += 1
                 if counter[level] <= mi[level]:
-                    INDICES[-1] = INDICES[-1] - M
+                    INDICES[-1] -= M
                     INDICES = np.hstack([
                         INDICES,
                         beg_mi[level] + counter[level] + M - 1
@@ -2111,7 +2111,7 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
                 else:
                     counter[level] = 0
                     INDICES = INDICES[0:m + np.sum(counter)]
-                    level = level - 1
+                    level -= 1
                     if level == -1:
                         if save:
                             if save:
@@ -2129,7 +2129,7 @@ def region_diff(poly, reg, abs_tol=ABS_TOL, intersect_tol=ABS_TOL,
             if level == N - 1:
                 res = union(res, reduce(test_poly), False)
             else:
-                level = level + 1
+                level += 1
     logger.debug('returning res from end')
     return res
 
